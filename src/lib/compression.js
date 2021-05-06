@@ -12,7 +12,7 @@ const lzw = {
     let code = 256;
     
     for (let i = 1; i < data.length; i++) {
-      currentChar = data[i];
+      currentCharacter = data[i];
       
       if (dictionary.has(phrase + currentCharacter)) {
         phrase += currentCharacter;
