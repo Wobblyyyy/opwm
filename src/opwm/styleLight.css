@@ -1,7 +1,76 @@
-.folder {
+body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+}
 
+.container {
+    background: blue;
+    width: 17vw;
+    height: 17vh;
+}
+
+.folder {
+    background: #a8a8a8;
 }
 
 .file {
+    background: #dedede;
+}
 
+#navbar {
+    width: 100vw;
+    height: 7vh;
+    background: black;
+    color: white;
+    font-size: 4vh;
+    padding-left: 1vw;
+    padding-top: 1vh;
+}
+
+#title {
+    display: inline;
+    font-family: 'Courier New', monospace;
+    width: 15vw;
+}
+
+#location {
+    display: inline;
+    margin-left: 15vw;
+}
+
+#back {
+    display: inline;
+}
+
+#renderView {
+    /*width: 80vw;*/
+    /*margin-left: 10vw;*/
+    /*margin-top: 10vh;*/
+    display: grid;
+    grid-gap: 3vw;
+}
+
+@media (min-width: 600px) {
+    #renderView {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .container {
+        width: 38.5vw;
+        height: 20vh;
+    }
+}
+
+@media (min-width: 900px) {
+    #renderView {
+        grid-template-columns: repeat(auto-fill, 250px);
+        margin-left: 3vw;
+        margin-right: 3vw;
+    }
+
+    .container {
+        width: 250px;
+        height: 120px;
+    }
 }

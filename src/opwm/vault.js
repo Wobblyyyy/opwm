@@ -1,7 +1,7 @@
-// noinspection JSUnfilteredForInLoop
+// noinspection JSUnfilteredForInLoop, UnnecessaryLocalVariableJS
 
-const sha = {
-    bits: 128,
+const aes256 = {
+    bits: 1024,
 
     rsaKey: function (contents) {
         return cryptico.generateRSAKey(contents, this.bits);
@@ -40,49 +40,191 @@ const stringJson = {
 
 const vault = {
     contents: {
-        main: {
-            fields: {},
-            name: "Main",
-            isFolder: true
+        isFolder: true,
+        name: "test",
+        fields: {
+            b: {
+                isFolder: true,
+                name: "sub test",
+                fields: {
+                    b1: {
+                        isFolder: true,
+                        name: "B1"
+                    },
+                    b2: {
+                        isFolder: true,
+                        name: "B2"
+                    }
+                }
+            },
+            c: {
+                isFolder: false,
+                name: "cool",
+                fields: {
+                    username: {
+                        key: "Username",
+                        value: "Very awesome username",
+                    }
+                }
+            },
+            d: {
+                isFolder: false,
+                name: "super cool",
+                fields: {
+                    username: {
+                        key: "Username",
+                        value: "Very awesome username",
+                    }
+                }
+            },
+            e: {
+                isFolder: true,
+                name: "small test",
+                fields: {}
+            },
+            f: {
+                isFolder: true,
+                name: "brush e",
+                fields: {}
+            },
+            g: {
+                isFolder: true,
+                name: "small test e",
+                fields: {}
+            },
+            h: {
+                isFolder: true,
+                name: "brush a",
+                fields: {}
+            },
         }
     },
 
-    encryptJson: function (json, pw) {
-        return sha.encrypt(stringJson.from(json), pw);
+    compress: function (v) {
+        return lzw.compress(v);
     },
 
-    decryptString: function (string, pw) {
-        return sha.decrypt(string, pw);
+    decompress: function (v) {
+        return lzw.decompress(v);
     },
 
-    decryptStringToJson: function (string, pw) {
-        return stringJson.to(sha.decrypt(string, pw).plaintext);
+    sealVault: function (json, pw) {
+        let string = stringJson.from(json);
+        let compressed = this.compress(string);
+        let encrypted = aes256.encrypt(compressed, pw);
+
+        return encrypted;
+    },
+
+    unsealVault: function (string, pw) {
+        let decrypted = aes256.decrypt(string, pw);
+        let decompressed = this.decompress(decrypted.plaintext);
+        let json = stringJson.to(decompressed);
+
+        return {
+            status: decrypted.status,
+            json: json
+        }
     }
 }
 
 const render = {
     base: "renderView",
     title: "location",
+    back: "back",
+    path: [],
+
+    tracePath: function (json) {
+        for (let p of this.path) {
+            if (json.hasOwnProperty(p)) {
+                json = json[p];
+            }
+        }
+
+        return json;
+    },
+
+    rerender: function () {
+        this.tree(this.tracePath(vault.contents));
+    },
+
+    goBack: function () {
+        if (this.path.length > 0) {
+            this.path.pop();
+            this.path.pop();
+        }
+
+        this.rerender();
+    },
+
+    click: function (target) {
+        this.path.push("fields");
+        this.path.push(target);
+
+        this.rerender();
+    },
+
+    bindClick: function (element, code) {
+        element.onclick = function () {
+            render.click(code);
+        }
+
+        return element;
+    },
 
     getBase: function () {
         return document.getElementById(this.base);
     },
 
-    getTitle: function() {
+    getTitle: function () {
         return document.getElementById(this.title);
     },
 
-    renderFolder: function (folder) {
+    getBack: function () {
+        return document.getElementById(this.back);
+    },
+
+    bindBack: function () {
+        let button = this.getBack();
+
+        button.onclick = function () {
+            render.goBack();
+        }
+    },
+
+    renderFolder: function (folder, code) {
         let name = folder.name;
+
+        let element = document.createElement("p");
+        element.innerHTML = name;
+        element.className = "container folder";
+
+        this.bindClick(element, code);
+
+        this.getBase().appendChild(element);
     },
 
-    renderFile: function (file) {
+    renderFile: function (file, code) {
         let name = file.name;
+
+        let element = document.createElement("p");
+        element.innerHTML = name;
+        element.className = "container file";
+
+        this.bindClick(element, code);
+
+        this.getBase().appendChild(element);
     },
 
-    renderField: function (field) {
+    renderField: function (field, code) {
         let key = field.key;
         let value = field.value;
+
+        let element = document.createElement("p");
+        element.innerHTML = "Key: " + key + "<br>Value: " + value;
+        element.className = "container field";
+
+        this.getBase().appendChild(element);
     },
 
     clear: function () {
@@ -94,6 +236,8 @@ const render = {
     },
 
     tree: function (json) {
+        this.clear();
+
         let name = json.name;
         let fields = json.fields;
 
@@ -111,53 +255,56 @@ const render = {
                 } else {
                     files[fieldName] = field;
                 }
-
-                console.log(folders);
-                console.log(files);
             }
 
             for (let folderName in folders) {
                 let folder = folders[folderName];
 
-                this.renderFolder(folder);
+                this.renderFolder(folder, folderName);
             }
 
             for (let fileName in files) {
                 let file = files[fileName];
 
-                this.renderFile(file);
+                this.renderFile(file, fileName);
             }
         } else {
             for (let fieldName in fields) {
                 let field = fields[fieldName];
 
-                this.renderField(field);
+                this.renderField(field, fieldName);
             }
         }
     }
 }
 
-render.tree({
-    isFolder: true,
-    name: "test",
-    fields: {
-        b: {
-            isFolder: true,
-            name: "sub test",
-            fields: {}
-        },
-        c: {
-            isFolder: false,
-            name: "cool",
-            fields: {
-                username: {
-                    key: "Username",
-                    value: "Very awesome username",
-                }
-            }
-        }
-    }
-});
+render.bindBack();
+render.tree(vault.contents);
+
+// const story = "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
+//     "he hasn't worked in in nearly a year. It wasn't going too well."
+
+// const complicated = {
+//     value1: hash("hello from value 1"),
+//     value2: hash(hash("hello from value 2")),
+//     value3: "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
+//         "he hasn't worked in in nearly a year. It wasn't going too well.",
+//     value4: "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
+//         "he hasn't worked in in nearly a year. It wasn't going too well.",
+//     value5: story
+// }
+
+// const e = lzw.encode(story);
+// const d = lzw.decode(story);
+
+// console.log(e);
+// console.log(d);
+
+// const sealed = vault.sealVault(complicated, story);
+// const unsealed = vault.unsealVault(sealed.cipher, story);
+
+// console.log(sealed);
+// console.log(unsealed);
 
 // const complicated = {
 //     "value1": "hello from value 1",
