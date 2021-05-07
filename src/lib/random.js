@@ -27,5 +27,8 @@ const random = {
     },
     textLowercase: function (length) {
         return this.text(length, this.lowercase);
+    },
+    eightCharId: function () {
+        return this.textLetters(8);
     }
 }

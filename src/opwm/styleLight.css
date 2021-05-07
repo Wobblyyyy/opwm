@@ -34,13 +34,24 @@ body {
     width: 15vw;
 }
 
+.navButton {
+    display: inline;
+    float: right;
+    width: 7vh;
+    height: 7vh;
+}
+
+.hidden {
+    display: inline;
+    float: right;
+    width: 7vh;
+    height: 7vh;
+    color: #404040;
+}
+
 #location {
     display: inline;
     margin-left: 15vw;
-}
-
-#back {
-    display: inline;
 }
 
 #renderView {
@@ -49,6 +60,18 @@ body {
     /*margin-top: 10vh;*/
     display: grid;
     grid-gap: 3vw;
+}
+
+.panel {
+
+}
+
+.transparentButton {
+    outline: none;
+    background: transparent;
+    border: none;
+    overflow: hidden;
+    font-size: 20px;
 }
 
 @media (min-width: 600px) {

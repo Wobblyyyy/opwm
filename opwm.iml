@@ -4,5 +4,7 @@
     <exclude-output />
     <content url="file://$MODULE_DIR$" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="52924a24c6" level="application" />
+    <orderEntry type="library" name="sweetalert" level="application" />
   </component>
 </module>

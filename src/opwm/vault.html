@@ -6,15 +6,19 @@
     <title>open password manager</title>
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/52924a24c6.js" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="styleLight.css">
 </head>
 <body>
 <div id="navbar">
-    <div id="title">opwm 1.0</div>
-    <div id="back">back</div>
+    <div id="title">opwm</div>
     <div id="location"></div>
+    <div class="navButton" id="back"><i class="fas fa-backward"></i></div>
+    <div class="navButton" id="addFolder"><i class="far fa-folder"></i></div>
+    <div class="navButton" id="addFile"><i class="far fa-file"></i></div>
 </div>
 <div id="renderView"></div>
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 <script src="../lib/cryptico.js"></script>
 <script src="../lib/sha256.js"></script>
 <script src="../lib/random.js"></script>

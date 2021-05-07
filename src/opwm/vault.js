@@ -1,4 +1,4 @@
-// noinspection JSUnfilteredForInLoop, UnnecessaryLocalVariableJS
+// noinspection JSUnfilteredForInLoop, UnnecessaryLocalVariableJS, JSUnresolvedVariable
 
 const aes256 = {
     bits: 1024,
@@ -41,63 +41,8 @@ const stringJson = {
 const vault = {
     contents: {
         isFolder: true,
-        name: "test",
-        fields: {
-            b: {
-                isFolder: true,
-                name: "sub test",
-                fields: {
-                    b1: {
-                        isFolder: true,
-                        name: "B1"
-                    },
-                    b2: {
-                        isFolder: true,
-                        name: "B2"
-                    }
-                }
-            },
-            c: {
-                isFolder: false,
-                name: "cool",
-                fields: {
-                    username: {
-                        key: "Username",
-                        value: "Very awesome username",
-                    }
-                }
-            },
-            d: {
-                isFolder: false,
-                name: "super cool",
-                fields: {
-                    username: {
-                        key: "Username",
-                        value: "Very awesome username",
-                    }
-                }
-            },
-            e: {
-                isFolder: true,
-                name: "small test",
-                fields: {}
-            },
-            f: {
-                isFolder: true,
-                name: "brush e",
-                fields: {}
-            },
-            g: {
-                isFolder: true,
-                name: "small test e",
-                fields: {}
-            },
-            h: {
-                isFolder: true,
-                name: "brush a",
-                fields: {}
-            },
-        }
+        name: "Vault",
+        fields: {}
     },
 
     compress: function (v) {
@@ -132,9 +77,14 @@ const render = {
     base: "renderView",
     title: "location",
     back: "back",
+    folderCreate: "addFolder",
+    fileCreate: "addFile",
+    fieldCreate: "addField",
     path: [],
 
     tracePath: function (json) {
+        if (this.path.length === 0) return json;
+
         for (let p of this.path) {
             if (json.hasOwnProperty(p)) {
                 json = json[p];
@@ -184,6 +134,45 @@ const render = {
         return document.getElementById(this.back);
     },
 
+    getFolderCreate: function () {
+        return document.getElementById(this.folderCreate);
+    },
+
+    getFileCreate: function () {
+        return document.getElementById(this.fileCreate);
+    },
+
+    getFieldCreate: function () {
+        return document.getElementById(this.fieldCreate)
+    },
+
+    panel: function (clicks) {
+        let panel = document.createElement("div");
+
+        let edit = document.createElement("button");
+        let rename = document.createElement("button");
+
+        edit.innerHTML = '<i class=\"far fa-edit\"></i>';
+        rename.innerHTML = '<i class=\"fab fa-amilia\"></i>';
+
+        edit.onclick = function () {
+            clicks.edit();
+        }
+        rename.onclick = function () {
+            clicks.rename();
+        }
+
+        edit.className = "transparentButton";
+        rename.className = "transparentButton";
+
+        panel.className = "panel";
+
+        panel.appendChild(edit);
+        panel.appendChild(rename);
+
+        return panel;
+    },
+
     bindBack: function () {
         let button = this.getBack();
 
@@ -192,14 +181,178 @@ const render = {
         }
     },
 
+    bindFolderCreate: function () {
+        let button = this.getFolderCreate();
+
+        button.onclick = function () {
+            swal("Create a new folder", {
+                content: "input",
+                icon: "info"
+            }).then((value) => {
+                if (value == null) return;
+
+                if (value.length === 0) {
+                    button.click();
+                } else {
+                    let id = random.eightCharId();
+
+                    render.addFolder({
+                        fieldId: id,
+                        name: value
+                    });
+
+                    swal(
+                        `Created folder "${value}" with ID ${id}`,
+                        {
+                            buttons: {
+                                open: {
+                                    text: "Open it",
+                                    value: "open"
+                                },
+                                dismiss: {
+                                    text: "Dismiss",
+                                    value: "dismiss"
+                                }
+                            }
+                        }
+                    ).then((finish) => {
+                        switch (finish) {
+                            case "open": {
+                                render.click(id);
+                                break;
+                            }
+
+                            default: {
+                                break;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    },
+
+    bindFileCreate: function () {
+        let button = this.getFileCreate();
+
+        button.onclick = function () {
+            swal(
+                "Create a new file", {
+                    content: "input",
+                    icon: "info"
+                }
+            ).then((value) => {
+                if (value == null) return;
+
+                if (value.length === 0) {
+                    button.click();
+                } else {
+                    let id = random.eightCharId();
+
+                    render.addFile({
+                        fieldId: id,
+                        name: value
+                    });
+
+                    swal(
+                        `Created file "${value}" with ID ${id}`,
+                        {
+                            buttons: {
+                                open: {
+                                    text: "Open it",
+                                    value: "open"
+                                },
+                                dismiss: {
+                                    text: "Dismiss",
+                                    value: "dismiss"
+                                }
+                            }
+                        }
+                    ).then((finish) => {
+                        switch (finish) {
+                            case "open": {
+                                render.click(id);
+                                break;
+                            }
+
+                            default: {
+                                break;
+                            }
+                        }
+                    });
+                }
+            });
+        }
+    },
+
+    bindFieldCreate: function () {
+
+    },
+
+    bindButtons: function () {
+        this.bindBack();
+        this.bindFolderCreate();
+        this.bindFileCreate();
+        // this.bindFieldCreate();
+    },
+
+    add: function (json, field) {
+        if (json.hasOwnProperty("fields")) {
+            json.fields[field.id] = field.contents;
+        } else {
+            json[field.id] = field.contents;
+        }
+
+        this.rerender();
+    },
+
+    addFolder: function (details) {
+        this.add(
+            this.tracePath(vault.contents),
+            {
+                id: details.fieldId,
+                contents: {
+                    isFolder: true,
+                    name: details.name,
+                    fields: {}
+                }
+            }
+        )
+    },
+
+    addFile: function (details) {
+        this.add(
+            this.tracePath(vault.contents),
+            {
+                id: details.fieldId,
+                contents: {
+                    isFolder: false,
+                    name: details.name,
+                    fields: {}
+                }
+            }
+        )
+    },
+
     renderFolder: function (folder, code) {
         let name = folder.name;
 
         let element = document.createElement("p");
-        element.innerHTML = name;
+        element.innerHTML = '<i class="far fa-folder"></i>' + name;
         element.className = "container folder";
 
         this.bindClick(element, code);
+
+        element.appendChild(
+            this.panel({
+                edit: function () {
+                    alert("EDIT");
+                },
+                rename: function () {
+                    alert("RENAME");
+                }
+            })
+        );
 
         this.getBase().appendChild(element);
     },
@@ -231,17 +384,42 @@ const render = {
         this.getBase().innerHTML = "";
     },
 
-    setTitle: function (title) {
-        this.getTitle().innerHTML = title;
+    setTitle: function () {
+        let path = this.path.filter(v => v !== "fields");
+        path.unshift("Vault");
+        this.getTitle().innerHTML = path.join("/");
     },
 
     tree: function (json) {
+        if (!json.hasOwnProperty("fields")) {
+            if (this.path[this.path.length - 1] === "fields") {
+                this.path.pop();
+            }
+
+            json = this.tracePath(vault.contents);
+        }
+
+        if (json.isFolder) {
+            this.getFolderCreate().className = "navButton";
+            this.getFileCreate().className = "navButton";
+            // this.getFieldCreate().className = "navButton";
+        } else {
+            this.getFolderCreate().className = "hidden";
+            this.getFileCreate().className = "hidden";
+            // this.getFieldCreate().className = "navButton";
+        }
+
+        if (json.name === "Vault") {
+            this.getBack().className = "hidden";
+        } else {
+            this.getBack().className = "navButton";
+        }
+
         this.clear();
 
-        let name = json.name;
         let fields = json.fields;
 
-        this.setTitle(name);
+        this.setTitle();
 
         if (json.isFolder) {
             let folders = {};
@@ -278,7 +456,7 @@ const render = {
     }
 }
 
-render.bindBack();
+render.bindButtons();
 render.tree(vault.contents);
 
 // const story = "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
