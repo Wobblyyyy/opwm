@@ -4,11 +4,15 @@ const aes256 = {
     bits: 1024,
 
     rsaKey: function (contents) {
-        return cryptico.generateRSAKey(contents, this.bits);
+        let key = cryptico.generateRSAKey(contents, this.bits);
+        return key;
     },
 
     rsaStr: function (rsaKey) {
-        return cryptico.publicKeyString(rsaKey);
+        let str = cryptico.publicKeyString(rsaKey);
+        terminal.println(`Generated public key with a length of ${str.length}`);
+        terminal.println(`Key has hash ${hash(str)}`);
+        return str;
     },
 
     rsa: function (rsaContents) {
@@ -20,7 +24,13 @@ const aes256 = {
     },
 
     encrypt: function (text, pw) {
-        return cryptico.encrypt(text, this.rsa(pw));
+        terminal.println(`Encrypting ${text.length} bytes of data`);
+        terminal.println(`Text hash: ${hash(text)}`);
+        terminal.println(`Pass hash: ${hash(pw)}`);
+        let encrypted = cryptico.encrypt(text, this.rsa(pw));
+        terminal.println(`Finished encrypting with a final size of ${encrypted.cipher.length}, ` +
+            `byte change: ${(encrypted.cipher.length - text.length)}`);
+        return encrypted;
     },
 
     decrypt: function (text, pw) {
@@ -46,11 +56,17 @@ const vault = {
     },
 
     compress: function (v) {
-        return lzw.compress(v);
+        terminal.println(`Compressing data: original size of ${v.length}`)
+        let compressed = lzw.compress(v);
+        terminal.println(`Finished compression: new size of ${compressed.length}`);
+        return compressed;
     },
 
     decompress: function (v) {
-        return lzw.decompress(v);
+        terminal.println(`Decompressing data: original size of ${v.length}`);
+        let decompressed = lzw.decompress(v);
+        terminal.println(`Finished decompression: new size of ${decompressed.length}`);
+        return decompressed;
     },
 
     sealVault: function (json, pw) {
@@ -70,6 +86,33 @@ const vault = {
             status: decrypted.status,
             json: json
         }
+    },
+
+    save: function () {
+        let pw = storage.getPassword();
+
+        if (pw !== null) {
+            return this.sealVault(vault.contents, pw).cipher;
+        }
+
+        return null;
+    },
+
+    load: function (string) {
+        let pw = storage.getPassword();
+
+        if (pw !== null) {
+            vault.contents = this.unsealVault(string, pw).json;
+            render.rerender();
+        }
+
+        return null;
+    }
+}
+
+const terminal = {
+    println: function (s) {
+        console.log(s);
     }
 }
 
@@ -185,6 +228,8 @@ const render = {
         let button = this.getFolderCreate();
 
         button.onclick = function () {
+            if (button.className.includes("hidden")) return;
+
             swal("Create a new folder", {
                 content: "input",
                 icon: "info"
@@ -236,6 +281,8 @@ const render = {
         let button = this.getFileCreate();
 
         button.onclick = function () {
+            if (button.className.includes("hidden")) return;
+
             swal(
                 "Create a new file", {
                     content: "input",
@@ -286,14 +333,70 @@ const render = {
     },
 
     bindFieldCreate: function () {
+        let button = this.getFieldCreate();
 
+        button.onclick = function () {
+            if (button.className.includes("hidden")) return;
+
+            let id = random.eightCharId();
+
+            let inputContainer = document.createElement("div");
+
+            let inputKey = document.createElement("input");
+            let inputSpacer = document.createElement("br");
+            let inputValue = document.createElement("input");
+
+            inputKey.className = "swal-content__input";
+            inputValue.className = "swal-content__input";
+
+            inputKey.placeholder = "Field's description...";
+            inputValue.placeholder = "Field's value...";
+
+            inputContainer.appendChild(inputKey);
+            inputContainer.appendChild(inputSpacer);
+            inputContainer.appendChild(inputValue);
+
+            swal({
+                text: "Create a new field",
+                content: inputContainer,
+                buttons: {
+                    done: {
+                        text: "Done",
+                        value: "done"
+                    }
+                }
+            }).then((finish) => {
+                switch (finish) {
+                    case "done": {
+                        let key = inputKey.value;
+                        let value = inputValue.value;
+
+                        if (key.length < 1 || value.length < 1) {
+                            button.click();
+                            return;
+                        }
+
+                        render.addField({
+                            fieldId: id,
+                            key: key,
+                            value: value
+                        });
+                        break;
+                    }
+
+                    default: {
+
+                    }
+                }
+            });
+        }
     },
 
     bindButtons: function () {
         this.bindBack();
         this.bindFolderCreate();
         this.bindFileCreate();
-        // this.bindFieldCreate();
+        this.bindFieldCreate();
     },
 
     add: function (json, field) {
@@ -329,6 +432,23 @@ const render = {
                     isFolder: false,
                     name: details.name,
                     fields: {}
+                }
+            }
+        )
+    },
+
+    addField: function (details) {
+        this.add(
+            this.tracePath(vault.contents),
+            {
+                id: details.fieldId,
+                contents: {
+                    isFolder: false,
+                    name: details.name,
+                    fields: {
+                        key: details.key,
+                        value: details.value
+                    }
                 }
             }
         )
@@ -402,11 +522,11 @@ const render = {
         if (json.isFolder) {
             this.getFolderCreate().className = "navButton";
             this.getFileCreate().className = "navButton";
-            // this.getFieldCreate().className = "navButton";
+            this.getFieldCreate().className = "hidden";
         } else {
             this.getFolderCreate().className = "hidden";
             this.getFileCreate().className = "hidden";
-            // this.getFieldCreate().className = "navButton";
+            this.getFieldCreate().className = "navButton";
         }
 
         if (json.name === "Vault") {
@@ -448,7 +568,7 @@ const render = {
             }
         } else {
             for (let fieldName in fields) {
-                let field = fields[fieldName];
+                let field = fields[fieldName].fields;
 
                 this.renderField(field, fieldName);
             }
@@ -456,45 +576,43 @@ const render = {
     }
 }
 
+const storage = {
+    data: "vault_data",
+    password: "vault_password",
+    code: "vault_current_code",
+
+    save: function () {
+        localStorage.setItem(this.data, vault.save());
+    },
+
+    load: function () {
+        vault.load(localStorage.getItem(this.data));
+    },
+
+    getPassword: function () {
+        return localStorage.getItem(this.password);
+    },
+
+    setPassword: function (password) {
+        localStorage.setItem(this.password, password);
+    },
+
+    getCurrentVaultCode: function () {
+        return localStorage.getItem(this.code);
+    },
+
+    setCurrentVaultCode: function (code) {
+        localStorage.setItem(this.code, code);
+    }
+}
+
+window.addEventListener("load", function (e) {
+    if (storage.getPassword() !== null) storage.load();
+});
+
+window.addEventListener("unload", function (e) {
+    if (storage.getPassword() !== null) storage.save();
+});
+
 render.bindButtons();
 render.tree(vault.contents);
-
-// const story = "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
-//     "he hasn't worked in in nearly a year. It wasn't going too well."
-
-// const complicated = {
-//     value1: hash("hello from value 1"),
-//     value2: hash(hash("hello from value 2")),
-//     value3: "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
-//         "he hasn't worked in in nearly a year. It wasn't going too well.",
-//     value4: "Once upon a time there was a person named Colin who was writing out a bunch of code in a language" +
-//         "he hasn't worked in in nearly a year. It wasn't going too well.",
-//     value5: story
-// }
-
-// const e = lzw.encode(story);
-// const d = lzw.decode(story);
-
-// console.log(e);
-// console.log(d);
-
-// const sealed = vault.sealVault(complicated, story);
-// const unsealed = vault.unsealVault(sealed.cipher, story);
-
-// console.log(sealed);
-// console.log(unsealed);
-
-// const complicated = {
-//     "value1": "hello from value 1",
-//     "value2": "hello from value 2"
-// }
-//
-// const encryptedComplicated = vault.encryptJson(complicated, "password");
-//
-// console.log(encryptedComplicated);
-//
-// const decryptedComplicated = vault.decryptString(encryptedComplicated.cipher, "password");
-//
-// console.log(decryptedComplicated);
-//
-// // console.log(new File(new Folder("", ""), "test", {test: 123}));
